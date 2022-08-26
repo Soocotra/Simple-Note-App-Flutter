@@ -1,30 +1,22 @@
 import 'dart:math';
 
+import 'package:deskto_app/addPage.dart';
 import 'package:deskto_app/db/sql_helper.dart';
 import 'package:deskto_app/homegrid.dart';
 import 'package:flutter/material.dart';
 import 'package:hexcolor/hexcolor.dart';
 
 class Home extends StatefulWidget {
-  static List<Map<String, dynamic>> notes = [];
-  const Home();
+  const Home({Key? key}) : super(key: key);
 
   @override
   State<Home> createState() => _HomeState();
 }
 
 class _HomeState extends State<Home> with RouteAware {
-  @override
-  void initState() {
-    RefreshNotes();
-    super.initState();
-  }
-
-  void RefreshNotes() async {
-    final data = await SQLHelper.getNotes();
-    setState(() {
-      Home.notes = data;
-    });
+  getNotes() async {
+    final notes = await SQLHelper.getNotes();
+    return notes;
   }
 
   @override
@@ -59,21 +51,15 @@ class _HomeState extends State<Home> with RouteAware {
             ),
           ),
         ),
-        body: HomeGrid(notes: Home.notes),
+        body: HomeGrid(),
         floatingActionButton: Padding(
           padding: const EdgeInsets.only(bottom: 15, right: 15),
           child: FloatingActionButton(
               onPressed: () {
                 Navigator.pushNamed(context, '/addPage', arguments: 0)
-                    .then((_) async {
-                  final data = await SQLHelper.getNotes();
+                    .then((value) {
                   setState(() {
-                    Home.notes = data;
-                    if (Home.notes.isEmpty) {
-                      HomeGrid.isEmptyGrid = true;
-                    } else {
-                      HomeGrid.isEmptyGrid = false;
-                    }
+                    getNotes();
                   });
                 });
               },

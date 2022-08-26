@@ -1,18 +1,16 @@
 import 'dart:math';
 
 import 'package:deskto_app/db/sql_helper.dart';
-import 'package:deskto_app/home.dart';
-import 'package:deskto_app/homegrid.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/src/foundation/key.dart';
-import 'package:flutter/src/widgets/framework.dart';
 import 'package:hexcolor/hexcolor.dart';
 import 'package:intl/intl.dart';
 
 class AddNotesPage extends StatefulWidget {
   final int idNotes;
-  const AddNotesPage({Key? key, this.idNotes = 0}) : super(key: key);
+  final dynamic notes;
+  const AddNotesPage({Key? key, this.idNotes = 0, this.notes})
+      : super(key: key);
 
   @override
   State<AddNotesPage> createState() => _AddNotesPageState();
@@ -24,20 +22,16 @@ class _AddNotesPageState extends State<AddNotesPage> {
 
   @override
   void initState() {
-    RefreshNotes();
-    print('reloaded');
+    refreshNotes();
     super.initState();
   }
 
-  void RefreshNotes() async {
-    final data = await SQLHelper.getNotes();
-    setState(() {
-      Home.notes = data;
-    });
+  void refreshNotes() async {
+    final notes = await SQLHelper.getNotes();
     try {
       if (widget.idNotes != 0) {
         final dataNotes =
-            Home.notes.firstWhere((element) => element['id'] == widget.idNotes);
+            notes.firstWhere((element) => element['id'] == widget.idNotes);
         titleController.text = dataNotes['title'];
         bodyController.text = dataNotes['body'];
       }
@@ -46,33 +40,27 @@ class _AddNotesPageState extends State<AddNotesPage> {
     }
   }
 
-  Future<void> addNotes() async {
+  void addNotes(String title, String body) async {
     String date = DateFormat.yMMMEd().format(DateTime.now());
     var randColor =
         Color((Random().nextDouble() * 0xFFFFFF).toInt()).withOpacity(1.0);
-    await SQLHelper.postNote(
-      titleController.text,
-      bodyController.text,
-      randColor,
-      date,
-    );
-    RefreshNotes();
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text("Note Added"),
-      duration: Duration(seconds: 2),
-    ));
+    await SQLHelper.postNote(title, body, randColor, date).then((value) {
+      Navigator.pop(context);
+      return ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("Note Added"),
+        duration: Duration(seconds: 2),
+      ));
+    });
   }
 
-  Future<void> editNotes(int id, String title, String body) async {
-    await SQLHelper.editNotes(id, title, body);
-    RefreshNotes();
+  void editNotes(int id, String title, String body) {
+    SQLHelper.editNotes(id, title, body);
     ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: const Text("Note Edited")));
+        .showSnackBar(const SnackBar(content: Text("Note Edited")));
   }
 
-  void deleteNotes(int id) async {
-    await SQLHelper.deleteNotes(id);
-    RefreshNotes();
+  void deleteNotes(int id) {
+    SQLHelper.deleteNotes(id);
   }
 
   @override
@@ -115,7 +103,7 @@ class _AddNotesPageState extends State<AddNotesPage> {
           ),
         ),
       ),
-      floatingActionButton: Container(
+      floatingActionButton: SizedBox(
         height: 100,
         width: 100,
         child: Padding(
@@ -124,14 +112,9 @@ class _AddNotesPageState extends State<AddNotesPage> {
             child: FloatingActionButton(
                 onPressed: () async {
                   (widget.idNotes == 0)
-                      ? await addNotes().then((value) {
-                          return Navigator.pop(context);
-                        })
-                      : await editNotes(widget.idNotes, titleController.text,
-                              bodyController.text)
-                          .then((value) {
-                          return Navigator.pop(context);
-                        });
+                      ? addNotes(titleController.text, bodyController.text)
+                      : editNotes(widget.idNotes, titleController.text,
+                          bodyController.text);
                 },
                 elevation: 10,
                 backgroundColor: const Color.fromARGB(255, 207, 207, 207),
@@ -150,6 +133,7 @@ class _AddNotesPageState extends State<AddNotesPage> {
     return IconButton(
         onPressed: () {
           showDialog(
+              useRootNavigator: false,
               context: context,
               builder: (_) {
                 return CupertinoAlertDialog(
@@ -167,8 +151,7 @@ class _AddNotesPageState extends State<AddNotesPage> {
                       onPressed: () {
                         deleteNotes(widget.idNotes);
                         ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: const Text("Note Deleted")));
+                            const SnackBar(content: Text("Note Deleted")));
                         Navigator.pop(context);
                         Navigator.pop(context);
                       },

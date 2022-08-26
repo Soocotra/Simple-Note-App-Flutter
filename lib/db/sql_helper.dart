@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart' as sql;
+import 'package:sqflite/sqflite.dart';
 
 class SQLHelper {
   static Future<void> createTables(sql.Database database) async {
@@ -31,12 +32,19 @@ class SQLHelper {
       'color': color.toString(),
       'date_created': date
     };
-    return await db.insert('notes', data);
+    return await db.insert('notes', data,
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  static Future<List<Map<String, dynamic>>> getNotes() async {
+  static Future<dynamic> getNotes() async {
     final db = await SQLHelper.db();
-    return db.query("notes");
+    var res = await db.query("notes");
+    if (res.isEmpty) {
+      return null;
+    } else {
+      var resultMap = res.toList();
+      return resultMap.isNotEmpty ? resultMap : null;
+    }
   }
 
   static Future<int> editNotes(int id, String title, String body) async {
