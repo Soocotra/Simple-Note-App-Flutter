@@ -1,5 +1,9 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:focused_menu/focused_menu.dart';
+import 'package:focused_menu/modals.dart';
 import 'db/sql_helper.dart';
 
 class HomeGrid extends StatefulWidget {
@@ -13,6 +17,39 @@ class _HomeGridState extends State<HomeGrid> with RouteAware {
   getNotes() async {
     final notes = await SQLHelper.getNotes();
     return notes;
+  }
+
+  void deleteNotes(int id) {
+    showDialog(
+        useRootNavigator: false,
+        context: context,
+        builder: (_) {
+          return CupertinoAlertDialog(
+            insetAnimationCurve: Curves.easeOutQuad,
+            content: const Text("Delete Note ?"),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text("NO"),
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+              ),
+              CupertinoDialogAction(
+                child: const Text("Yes"),
+                onPressed: () {
+                  SQLHelper.deleteNotes(id);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Note Deleted")));
+                  Navigator.pop(context);
+                },
+              )
+            ],
+          );
+        }).then((value) {
+      setState(() {
+        getNotes();
+      });
+    });
   }
 
   @override
@@ -39,86 +76,142 @@ class _HomeGridState extends State<HomeGrid> with RouteAware {
                     ),
                   );
                 } else {
-                  return MasonryGridView.count(
-                      crossAxisCount: 2,
-                      itemCount: noteData.data.length,
-                      mainAxisSpacing: 10,
-                      crossAxisSpacing: 10,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 20, horizontal: 15),
-                      itemBuilder: (context, index) {
-                        return InkWell(
-                          onTap: () {
-                            Navigator.pushNamed(context, '/addPage',
-                                    arguments: noteData.data[index]['id'])
-                                .then((value) {
-                              {
-                                setState(() {
-                                  getNotes();
-                                });
-                              }
-                            });
-                          },
-                          // onLongPress: ,
-                          child: Container(
-                            decoration: BoxDecoration(
-                                color: (noteData.data[index].length == 0)
-                                    ? Colors.transparent
-                                    : pickColour(noteData, index),
-                                borderRadius: BorderRadius.circular(10)),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 20.0, vertical: 10),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    (noteData.data[index]['title'] == '')
-                                        ? 'UNTITLED'
-                                        : noteData.data[index]['title'],
-                                    textAlign: TextAlign.left,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w900,
-                                        color: (noteData.data[index]['title'] !=
-                                                "")
-                                            ? const Color.fromARGB(
-                                                255, 22, 26, 11)
-                                            : const Color.fromARGB(
-                                                55, 22, 26, 11),
-                                        fontSize: 25),
+                  return StretchingOverscrollIndicator(
+                    axisDirection: AxisDirection.down,
+                    child: ScrollConfiguration(
+                      behavior:
+                          const ScrollBehavior().copyWith(overscroll: false),
+                      child: MasonryGridView.count(
+                          crossAxisCount: 2,
+                          itemCount: noteData.data.length,
+                          mainAxisSpacing: 10,
+                          crossAxisSpacing: 10,
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 20, horizontal: 15),
+                          itemBuilder: (context, index) {
+                            int reverseIndex = noteData.data.length - 1 - index;
+                            return FocusedMenuHolder(
+                              menuOffset: 10,
+                              menuWidth: 200,
+                              onPressed: () {},
+                              menuItems: [
+                                FocusedMenuItem(
+                                    title: const Text("Open"),
+                                    trailingIcon:
+                                        const Icon(CupertinoIcons.up_arrow),
+                                    onPressed: () {
+                                      Navigator.pushNamed(context, '/addPage',
+                                              arguments: noteData
+                                                  .data[reverseIndex]['id'])
+                                          .then((value) {
+                                        setState(() {
+                                          getNotes();
+                                        });
+                                      });
+                                    }),
+                                FocusedMenuItem(
+                                    title: const Text(
+                                      "Delete",
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                    trailingIcon: const Icon(
+                                      CupertinoIcons.delete,
+                                      color: Colors.red,
+                                    ),
+                                    onPressed: () {
+                                      deleteNotes(
+                                          noteData.data[reverseIndex]['id']);
+                                    })
+                              ],
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.pushNamed(context, '/addPage',
+                                          arguments: noteData.data[reverseIndex]
+                                              ['id'])
+                                      .then((value) {
+                                    {
+                                      setState(() {
+                                        getNotes();
+                                      });
+                                    }
+                                  });
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                      color: (noteData
+                                                  .data[reverseIndex].length ==
+                                              0)
+                                          ? Colors.transparent
+                                          : pickColour(noteData, reverseIndex),
+                                      borderRadius: BorderRadius.circular(10)),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 20.0, vertical: 10),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          noteData.data[reverseIndex]
+                                              ['date_created'],
+                                          textAlign: TextAlign.left,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.w900,
+                                              color: Color.fromARGB(
+                                                  202, 22, 26, 11),
+                                              fontSize: 13),
+                                        ),
+                                        const SizedBox(
+                                          height: 10,
+                                        ),
+                                        Text(
+                                          (noteData.data[reverseIndex]
+                                                      ['title'] ==
+                                                  '')
+                                              ? 'UNTITLED'
+                                              : noteData.data[reverseIndex]
+                                                  ['title'],
+                                          textAlign: TextAlign.left,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.w900,
+                                              color:
+                                                  (noteData.data[reverseIndex]
+                                                              ['title'] !=
+                                                          "")
+                                                      ? const Color.fromARGB(
+                                                          255, 22, 26, 11)
+                                                      : const Color.fromARGB(
+                                                          55, 22, 26, 11),
+                                              fontSize: 25),
+                                        ),
+                                        const SizedBox(
+                                          height: 20,
+                                        ),
+                                        Text(
+                                          noteData.data[reverseIndex]['body'],
+                                          maxLines: 10,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.left,
+                                          style: const TextStyle(
+                                              color: Color.fromARGB(
+                                                  255, 22, 26, 11),
+                                              fontWeight: FontWeight.w400,
+                                              fontSize: 14),
+                                        ),
+                                        const SizedBox(
+                                          height: 20,
+                                        )
+                                      ],
+                                    ),
                                   ),
-                                  const SizedBox(
-                                    height: 10,
-                                  ),
-                                  Text(
-                                    noteData.data[index]['body'],
-                                    maxLines: 10,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.left,
-                                    style: const TextStyle(
-                                        color: Color.fromARGB(255, 22, 26, 11),
-                                        fontWeight: FontWeight.w400,
-                                        fontSize: 14),
-                                  ),
-                                  const SizedBox(
-                                    height: 30,
-                                  ),
-                                  Text(
-                                    noteData.data[index]['date_created'],
-                                    textAlign: TextAlign.left,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w900,
-                                        color: Color.fromARGB(255, 22, 26, 11),
-                                        fontSize: 14),
-                                  )
-                                ],
+                                ),
                               ),
-                            ),
-                          ),
-                        );
-                      });
+                            );
+                          }),
+                    ),
+                  );
                 }
               }
             case ConnectionState.none:
@@ -141,7 +234,9 @@ class _HomeGridState extends State<HomeGrid> with RouteAware {
       int value = int.parse(valueString, radix: 16);
       return Color(value);
     } catch (e) {
-      print(e);
+      if (kDebugMode) {
+        print(e);
+      }
     }
     return null;
   }

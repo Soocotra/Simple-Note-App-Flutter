@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:deskto_app/db/sql_helper.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hexcolor/hexcolor.dart';
 import 'package:intl/intl.dart';
@@ -36,7 +37,9 @@ class _AddNotesPageState extends State<AddNotesPage> {
         bodyController.text = dataNotes['body'];
       }
     } catch (e) {
-      print(e);
+      if (kDebugMode) {
+        print(e);
+      }
     }
   }
 
@@ -55,6 +58,7 @@ class _AddNotesPageState extends State<AddNotesPage> {
 
   void editNotes(int id, String title, String body) {
     SQLHelper.editNotes(id, title, body);
+    Navigator.pop(context);
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text("Note Edited")));
   }

@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 class PageRouting {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     final args = settings.arguments;
-    final args2 = settings.arguments;
 
     switch (settings.name) {
       case '/home':
